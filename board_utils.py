@@ -14,14 +14,14 @@ def __print_board_header(board: GameBoard) -> None:
 def print_side_by_side_boards(boards: List[GameBoard]) -> None:
     max_line = max(boards, key=lambda b: b.lines_count).lines_count
 
-    def print_boards_separetor() -> None:
+    def print_boards_separator() -> None:
         print(' '*2 + '|' + ' '*2, end='')
 
     def print_headers(bs: List[GameBoard]) -> None:
         for (i, b) in enumerate(bs):
             __print_board_header(b)
-            if i != len(boards) - 1:
-                print_boards_separetor()
+            if i != len(boards) - 1: # FIXME: this is incredibly ugly
+                print_boards_separator()
 
     print_headers(boards)
 
@@ -32,8 +32,8 @@ def print_side_by_side_boards(boards: List[GameBoard]) -> None:
                 print(' '*4*b.get_columns_count(), end='')
                 continue
             print_board_line(b, l)
-            if i != len(boards) - 1:
-                print_boards_separetor()
+            if i != len(boards) - 1: # FIXME: this is incredibly ugly
+                print_boards_separator()
         print()
     print_headers(boards)
     print()
