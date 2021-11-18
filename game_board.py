@@ -35,6 +35,8 @@ class GameBoard(List[List[ShipPart]]):
             new_line = line + (ship_size - 1)
         elif angle == 'H':
             new_col = col + (ship_size - 1)
+        else:
+            return stopValue
 
         if not (self.is_on_board(line, col) and self.is_on_board(new_line, new_col)):
             return stopValue
@@ -47,7 +49,7 @@ class GameBoard(List[List[ShipPart]]):
         return defaultValue
 
 
-    def insert_boat_at(self, ship_type: ShipPart, angle: str, line: int, col: int) -> None:
+    def insert_ship_at(self, ship_type: ShipPart, angle: str, line: int, col: int) -> None:
         # we don't need an assertion because the check for the stopValue latter makes sure
         # that we'll stop (and raise an exception) if it's not possible (since __do_action_at
         # will stop unexpectedly)
@@ -55,7 +57,7 @@ class GameBoard(List[List[ShipPart]]):
         errorValue = ''
 
         def action(self, line: int, col: int) -> Optional[str]:
-            print("putting", ship_type, "at", "(" + str(line) + "," + str(col) + ")")
+            #print("putting", ship_type, "at", "(" + str(line) + "," + str(col) + ")")
 
             if self[line][col].value != ' ':
                 return errorValue
@@ -68,7 +70,7 @@ class GameBoard(List[List[ShipPart]]):
         if (self.__do_action_at(ship_type, angle, line, col, None, errorValue, action)) == errorValue:
             raise ValueError("Could not put" + str(ship_type) + "at position " + angle + "(" + str(line) + "," + str(col) + ")")
 
-    def ship_can_be_put_at(self, ship_type: ShipPart, angle: str, line: int, col: int) -> bool:
+    def can_insert_ship_at(self, ship_type: ShipPart, angle: str, line: int, col: int) -> bool:
         def action(self, line: int, col: int) -> bool:
             return self[line][col].value == ' '
 
