@@ -5,6 +5,8 @@ class ShipPart():
     touched: bool
 
     def __init__(self, val: str) -> None:
+        if val not in [' ', 'T', 'S', 'R', 'C', 'P']:
+            raise
         self.touched = False
         self.value = val
 

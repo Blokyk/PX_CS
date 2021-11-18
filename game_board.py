@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TypeVar, Any, Callable, List, OrderedDict
+from typing import Optional, TypeVar, Any, Callable, List, OrderedDict
 from ships import get_size
 
 from ships import ShipPart
@@ -21,50 +21,55 @@ class GameBoard(List[List[ShipPart]]):
         return len(self[0])
 
     def is_on_board(self, line: int, col: int) -> bool:
-        #print(line, col, 'for', self.lines_count, self.get_columns_count())
-        return line in range(0, self.lines_count) and col in range(0, self.get_columns_count())
+        return (0 <= line < self.lines_count) and (0 <= col < self.get_columns_count())
 
-    def __do_action_at(self, ship_type: ShipPart, angle: str, line_letter: str, col: int, defaultValue: _T, stopValue: _T, func: Callable[[Any, int, int], _T]) -> _T:
-        line = letter_to_idx(line_letter)
-
+    def __do_action_at(self, ship_type: ShipPart, angle: str, line: int, col: int, defaultValue: _T, stopValue: _T, func: Callable[[Any, int, int], _T]) -> _T:
         ship_size = get_size(ship_type)
+
+        print(ship_size)
 
         new_col = col
         new_line = line
 
-        if angle == 'H':
+        if angle == 'V':
             new_line = line + (ship_size - 1)
-        elif angle == 'V':
-            new_col = col + (ship_size)
+        elif angle == 'H':
+            new_col = col + (ship_size - 1)
 
         if not (self.is_on_board(line, col) and self.is_on_board(new_line, new_col)):
             return stopValue
 
-        if (line != new_line):
-            for i in range(min(line, new_line), max(line, new_line)+1):
-                if func(self, i, col) == stopValue:
-                    return func(self, i, col)
-        else:
-            for j in range(min(col, new_col), max(col, new_col)):
-                if func(self, line, j) == stopValue:
-                    return func(self, line, j)
+        for i in range(line, new_line+1):
+            for j in range(col, new_col+1):
+                if (res := func(self, i, j)) == stopValue:
+                    return res
 
         return defaultValue
 
 
-    def put_at(self, ship_type: ShipPart, angle: str, line_letter: str, col: int) -> None:
-        assert(self.ship_can_be_put_at(ship_type, angle, line_letter, col))
+    def insert_boat_at(self, ship_type: ShipPart, angle: str, line: int, col: int) -> None:
+        # we don't need an assertion because the check for the stopValue latter makes sure
+        # that we'll stop (and raise an exception) if it's not possible (since __do_action_at
+        # will stop unexpectedly)
 
-        def action(self, line: int, col: int) -> None:
+        errorValue = ''
+
+        def action(self, line: int, col: int) -> Optional[str]:
             print("putting", ship_type, "at", "(" + str(line) + "," + str(col) + ")")
+
+            if self[line][col].value != ' ':
+                return errorValue
+
             self[line][col] = ShipPart(ship_type.value)
 
                                                 # stopValue has to be different than None
-                                                # because our function always returns None
-        self.__do_action_at(ship_type, angle, line_letter, col, None, '', action)
+                                                #   - because our function always returns None
+                                                #   - so that we can detect when there's an error
+        if (self.__do_action_at(ship_type, angle, line, col, None, errorValue, action)) == errorValue:
+            raise ValueError("Could not put" + str(ship_type) + "at position " + angle + "(" + str(line) + "," + str(col) + ")")
 
-    def ship_can_be_put_at(self, ship_type: ShipPart, angle: str, line_letter: str, col: int) -> bool:
+    def ship_can_be_put_at(self, ship_type: ShipPart, angle: str, line: int, col: int) -> bool:
         def action(self, line: int, col: int) -> bool:
             return self[line][col].value == ' '
 
-        return self.__do_action_at(ship_type, angle, line_letter, col, True, False, action)
+        return self.__do_action_at(ship_type, angle, line, col, True, False, action)

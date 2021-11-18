@@ -46,5 +46,9 @@ def enter_orientation() -> str:
 
     return output
 
+
+boards[0].insert_boat_at(ShipPart('C'), 'H', 6, 6)
+boards[0].insert_boat_at(ShipPart('C'), 'V', 5, 1)
+
 print_board(boards[0])
 print_board(boards[1])
