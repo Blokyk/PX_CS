@@ -1,11 +1,15 @@
 from enum import Enum
-from typing import Optional, TypeVar, Any, Callable, List, OrderedDict
+from typing import Dict, Optional, Tuple, TypeVar, Any, Callable, List, OrderedDict
 from ships import get_size
 
 from ships import ShipPart
 from utils import letter_to_idx
 
 _T = TypeVar('_T')
+
+class InternalGameBoard(Dict[Tuple[int, int], str]):
+    def __init__(self):
+        return
 
 class GameBoard(List[List[ShipPart]]):
     lines_count: int
@@ -25,8 +29,9 @@ class GameBoard(List[List[ShipPart]]):
 
     def __do_action_at(self, ship_type: ShipPart, angle: str, line: int, col: int, defaultValue: _T, stopValue: _T, func: Callable[[Any, int, int], _T]) -> _T:
         ship_size = get_size(ship_type)
+        angle = angle.upper()
 
-        print(ship_size)
+        #print(ship_size)
 
         new_col = col
         new_line = line
@@ -75,3 +80,6 @@ class GameBoard(List[List[ShipPart]]):
             return self[line][col].value == ' '
 
         return self.__do_action_at(ship_type, angle, line, col, True, False, action)
+
+    def get_hit_result(self, line: int, col: int) -> bool:
+        return self[line][col] != ' '

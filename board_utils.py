@@ -3,13 +3,13 @@ from typing import List
 from ships import ShipPart
 from utils import letter_to_idx
 
-from game_board import GameBoard
+from game_board import GameBoard, InternalGameBoard
 
 # I feel way better about my logger implementation in Parsex now that
 # I've written this shit piece of code :)
 
-def __print_board_header(board: GameBoard) -> None:
-        print('————'*board.get_columns_count() + '—', end='')
+def __print_board_header(board: GameBoard, end: str = '') -> None:
+        print('————'*board.get_columns_count() + '—', end=end)
 
 def print_side_by_side_boards(boards: List[GameBoard]) -> None:
     max_line = max(boards, key=lambda b: b.lines_count).lines_count
@@ -40,11 +40,11 @@ def print_side_by_side_boards(boards: List[GameBoard]) -> None:
 
 def print_board(board: GameBoard) -> None:
     col_count = board.get_columns_count()
+    __print_board_header(board, end = '\n')
     for i in range(board.lines_count):
-        print('————'*col_count + '—')
         print_board_line(board, i)
         print()
-    print('————'*board.get_columns_count() + '—')
+    __print_board_header(board, end = '\n')
 
 def print_board_line(board: GameBoard, idx: int) -> None:
     col_count = board.get_columns_count()
@@ -54,3 +54,13 @@ def print_board_line(board: GameBoard, idx: int) -> None:
 
 def get_ship_part_at(grid: GameBoard, line: int, col: int) -> ShipPart:
     return grid[line][col]
+
+def board_to_internal(board: GameBoard) -> InternalGameBoard:
+    output = InternalGameBoard()
+
+    for line in range(board.lines_count):
+        for col in range(board.get_columns_count()):
+            if (board[line][col].value != ' '):
+                output[(line, col)] = board[line][col].value
+
+    return output

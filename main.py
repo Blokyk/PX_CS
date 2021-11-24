@@ -1,9 +1,11 @@
 if __name__ != '__main__':
     raise ImportError("main.py should never be imported !")
 
+import json
+from os import path
 from typing import List
-from board_utils import print_board, print_side_by_side_boards
-from game_board import GameBoard
+from board_utils import board_to_internal, print_board, print_board_line, print_side_by_side_boards
+from game_board import GameBoard, InternalGameBoard
 
 from ships import ShipPart, get_size
 from utils import format_error, format_pos_and_angle, letter_to_idx
@@ -11,31 +13,50 @@ from main_utils import *
 
 boards = [init_board(10, 10), init_board(10, 10)]
 
-for board in boards:
-   for part in map(lambda l: ShipPart(l), ['P', 'C', 'R', 'S', 'T']):
-       print("Where do you want to put your" + str(part) + "(" + str(get_size(part)) + " spaces) ?")
 
-       pos = enter_position(board)
-       ori = enter_orientation()
+# if path.exists("./boards.json"):
+#     f = open("./boards.json", "r")
+#     dic_list: List[InternalGameBoard] = json.loads(f.read())
+#     for i in range(len(dic_list)):
+#         for (line, col) in dic_list[i]:
+#             boards[i][line][col] = ShipPart(dic_list[i][(line, col)])
+# else:
 
-       while not board.can_insert_ship_at(part, ori, pos[0], pos[1]):
-           print("You can't put a ship there !", end='')
-
-           if (board[pos[0]][pos[1]] != ' '):
-               print("There's already a" + str(board[pos[0]][pos[1]]) + "!", end='')
-
-           print()
-
-           pos = enter_position(board)
-           ori = enter_orientation()
-
-       board.insert_ship_at(part, ori, pos[0], pos[1])
-       print_board(board)
-       #print("Successfully inserted" + str(part) + "@ " + format_pos_and_angle(pos[0], pos[1], ori))
-
-# boards[0].insert_boat_at(ShipPart('C'), 'H', 6 - 1, 6 - 1)
-# boards[0].insert_boat_at(ShipPart('C'), 'V', 5 - 1, 1 - 1)
-
-# boards[1].insert_boat_at(ShipPart('P'), 'V', 2 - 1, 3 - 1)
+boards = mock_player_boards(boards)
 
 print_side_by_side_boards(boards)
+
+dic_boards: List[InternalGameBoard] = []
+
+for i in range(len(boards)):
+    dic_boards.append(board_to_internal(boards[i]))
+
+print(dic_boards)
+
+# f = open("./boards.json", "w+")
+# f.write(json.dumps(dic_boards))
+
+isGameFinished = False
+
+hitlists: List[InternalGameBoard] = [InternalGameBoard(), InternalGameBoard()]
+
+sunk_types: List[str] = []
+
+while not isGameFinished:
+    enemy_board = dic_boards[1]
+    enemy_hitlist = hitlists[1]
+
+    act_player_turn(dic_boards[1], hitlists[1])
+
+    print(hitlists)
+
+    for part in set(ship_types).difference(sunk_types):
+        if ship_type_is_sunk(part, dic_boards[1], hitlists[1]):
+            print(f"Ship {part} has been sunk on P2's board !")
+            sunk_types.append(part)
+"""
+    for i in range(len(dic_boards)):
+        if are_all_ships_sunk(dic_boards[i], hitlists[i]):
+            print(f"Player {i+1} lost !")
+            isGameFinished = True
+"""
