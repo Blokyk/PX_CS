@@ -1,37 +1,42 @@
 from random import Random, randint, random
-from typing import Deque, List, Tuple
-from board_utils import does_attack_hit, is_on_board, hit_result
+from typing import List, Tuple
 
+from board_utils import is_on_board
 from game_board import GameBoard
 from ships import get_size
 from utils import debug
 
-def gen_diagonal_for_size(min_size: int, board_size: int) -> List[Tuple[int, int]]:
+from player_types.base import Player
+
+
+def gen_diagonal_for_size(min_boat_size: int, board_size: int) -> List[Tuple[int, int]]:
+    """Generates the optimal pattern for a ship of size $min_size and a board of $board_size"""
     output = []
 
     for line in range(board_size):
         for col_multiplier in range(board_size):
-            if ((line % min_size) + col_multiplier * min_size >= board_size):
+            if ((line % min_boat_size) + col_multiplier * min_boat_size >= board_size):
                 break
-            output.append((line, (line % min_size) + col_multiplier * min_size))
+            output.append((line, (line % min_boat_size) + col_multiplier * min_boat_size))
 
     return output
 
-class AIPlayer():
-    # Using only sizes 2 and 4 is a good compromise between accuracy and speed : if it was
-    # too high we would probably miss a lot of ships ; if it was too low we'd try more attacks
-    # than necessary
+class AIPlayer(Player):
     pattern_quadrants: List[List[Tuple[int, int]]]
 
     max_boat_size: int
     targets_stack: List[Tuple[int, int]]
 
     def __init__(self) -> None:
-        self.pattern_quadrants = [gen_diagonal_for_size(i, 10) for i in [2, 4]]
         self.max_boat_size = 5
         self.targets_stack = []
 
-    def get_next_ai_turn(self, board: GameBoard, tried_list: GameBoard) -> Tuple[int, int]:
+        # Using only sizes 2 and 4 is a good compromise between accuracy and speed : if it was
+        # too high we would probably miss a lot of ships ; if it was too low we'd try more attacks
+        # than necessary
+        self.pattern_quadrants = [gen_diagonal_for_size(i, 10) for i in [2, 4]]
+
+    def get_next_action(self, tried_list: GameBoard) -> Tuple[int, int]:
         quadrant_idx = 0 if self.max_boat_size < 4 else 1
 
         def get_next_spot() -> Tuple[int, int]:
@@ -60,8 +65,15 @@ class AIPlayer():
 
         return next_spot
 
-    def react_hit_success(self, board: GameBoard, tried_list: GameBoard, hit: Tuple[int, int]):
-        """Notifies the AI it hit a ship
+    # These functions could be integrated directly into get_next_ai_turn by passing it
+    # the board, but :
+    #   A.  The AI would then have more knowledge than the player, and we might use the info
+    #       on the board without realizing it
+    #
+    #   B.  (kind of) Separation of concerns : We can just use the interface provided instead
+    #       and abstract over some of the implementation of the board
+    def react_hit_success(self, tried_list: GameBoard, hit: Tuple[int, int]):
+        """Notifies the AI it hit something
         """
 
         if len(self.targets_stack) == 0:
@@ -79,7 +91,7 @@ class AIPlayer():
             if target not in tried_list and target not in self.targets_stack and is_on_board(target):
                 self.targets_stack.append(target)
 
-    def react_hit_sunk(self, board: GameBoard, tried_list: GameBoard, hit: Tuple[int, int], ship_type: str):
+    def react_hit_sunk(self, tried_list: GameBoard, hit: Tuple[int, int], ship_type: str):
         """Notifies the AI it sunk a ship
         """
 

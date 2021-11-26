@@ -8,7 +8,7 @@ def board_to_internal(board: SetupGameBoard) -> GameBoard:
     for line in range(board.lines_count):
         for col in range(board.columns_count):
             if (board[line][col] != ' '):
-                output[(line, col)] = board[line][col]
+                output[line, col] = board[line][col]
 
     return output
 

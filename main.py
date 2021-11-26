@@ -5,19 +5,50 @@ import json
 from os import path
 from typing import Any, Callable, List
 from board_setup_utils import internal_to_setup, print_board, print_board_line, print_side_by_side_boards
-from board_utils import board_to_internal, does_attack_hit
+from board_utils import board_to_internal, does_attack_hit, hit_result
 from game_board import SetupGameBoard, GameBoard
+
 
 from ships import get_size
 from utils import format_error, format_pos_and_angle, letter_to_idx
 from main_utils import *
-import ai
+from player_types import ai, base, human, mock
 
-boards = [SetupGameBoard(10, 10), SetupGameBoard(10, 10)]
+boards = []
 
-boards = mock_player_boards(boards)
+def get_player(num: int) -> base.Player:
+    print(f"What type of player do you want P{num} to be ?\n\t- [h]uman\n\t- [r]andom/[m]ock\n\t- [a]i")
 
-print_side_by_side_boards(boards, ["P1", "P2"])
+    is_player_type_valid = False
+    output = base.Player()
+
+    while not is_player_type_valid:
+
+        answer = input("h/r/m/a : ").lower()
+
+        # assume it's true, and only loop again if it's not valid (i.e. the else branch)
+        is_player_type_valid = True
+
+        if answer == "h" or answer == "human":
+            output = human.HumanPlayer()
+        elif answer in "rm" or answer == "random" or answer == "mock":
+            output = mock.RandomPlayer()
+        elif answer == "a" or answer == "ai":
+            output = ai.AIPlayer()
+        else:
+            is_player_type_valid = False
+
+    return output
+
+players = [get_player(1), get_player(2)]
+
+for (i, p) in enumerate(players):
+    if p.__class__ == human.HumanPlayer:
+        boards.append(init_player_board(10, 10))
+    else:
+        boards.append(generate_random_board(10, 10))
+
+print_side_by_side_boards(boards, ["P" + str(i+1) for i in range(0, len(boards))])
 
 internal_boards: List[GameBoard] = []
 
@@ -31,59 +62,70 @@ internal_boards.reverse()
 
 isGameFinished = False
 
-tried_lists: List[GameBoard] = [GameBoard(), GameBoard()]
+tried_lists: List[GameBoard] = [GameBoard() for _ in range(len(players))]
 
 sunk_types: List[str] = []
 
 round_count = 0
 
-p1 = ai.AIPlayer()
-p2 = ai.AIPlayer()
-
 while not isGameFinished:
-
     round_count += 1
     print(f"ROUND {round_count}")
 
     def check_player_hit(idx: int, hit: Tuple[int, int], hit_handler: Any, sink_handler: Any) -> bool:
-        success = does_attack_hit(internal_boards[idx], hit)
-        tried_lists[idx][hit] = internal_boards[idx][hit] if success else "~"
+        board_idx = get_enemy_board_idx(idx)
+        success = does_attack_hit(internal_boards[board_idx], hit)
+        tried_lists[idx][hit] = internal_boards[board_idx][hit] if success else "~"
 
         if success:
             print(f"P{idx+1} : HIT @ {hit}")
             for part in set(ship_types).difference(sunk_types):
-                if ship_type_is_sunk(part, internal_boards[idx], tried_lists[idx]):
-                    print(f"Ship {part} has been sunk on P{(idx+1)*2 % 3}'s board !")
+                if internal_boards[board_idx].ship_type_is_sunk(part, tried_lists[idx]):
+                    print(f"P{idx+1} sunk a {part} ship on P{(idx+1)*2 % 3}'s board !")
                     sunk_types.append(part)
-                    sink_handler(internal_boards[idx], tried_lists[idx], hit, internal_boards[idx][hit])
+                    sink_handler(tried_lists[idx], hit, internal_boards[board_idx][hit])
                     return True
 
             # if we got here, that means that we didn't sink any ship
-            hit_handler(internal_boards[idx], tried_lists[idx], hit)
+            hit_handler(tried_lists[idx], hit)
         else:
             print(f"P{idx+1} : Miss @ {hit}")
 
         return success
 
-    def do_nothing_hit(board: GameBoard, tried_list: GameBoard, hit: Tuple[int, int, int]):
-        pass
-    def do_nothing_sunk(board: GameBoard, tried_list: GameBoard, hit: Tuple[int, int, int], ship_type: str):
-        pass
+    any_success = False
 
-    p1_success = check_player_hit(0, ask_for_player_turn(internal_boards[0], tried_lists[0]), p1.react_hit_success, p1.react_hit_sunk)
-    p2_success = check_player_hit(1, p2.get_next_ai_turn(internal_boards[1], tried_lists[1]), p2.react_hit_success, p2.react_hit_sunk)
+    for (i, player) in enumerate(players):
+        print()
+        print("—"*8 + f"( P{i+1} )" + "—"*72)
+        print()
+        print_side_by_side_boards([internal_to_setup(internal_boards[-i]), internal_to_setup(tried_lists[-i])], [f"P{i+1}'s board", f"P{i+1}'s hits"])
+        print()
+        res = check_player_hit(
+            i,
+            player.get_next_action(tried_lists[i]),
+            player.react_hit_success,
+            player.react_hit_sunk
+        )
+
+        if res:
+            any_success = True
+
+    print()
+    print()
 
     # If any of them hit, check if any of the bords are lost
-    if p1_success or p2_success:
+    if any_success:
         for i in range(len(internal_boards)):
-            if are_all_ships_sunk(internal_boards[i], tried_lists[i]):
+            # Yes, while testing i had a game where both AIs won and lost at the same time... 54 rounds if you're wondering
+            if not isGameFinished and internal_boards[get_enemy_board_idx(i)].are_all_ships_sunk(tried_lists[i]):
                 print(f"Player {(i+1)*2 % 3} lost !")
                 isGameFinished = True
 
-    print_side_by_side_boards([internal_to_setup(internal_boards[0]), internal_to_setup(internal_boards[1])], ["P1", "P2"])
-    print()
-    print("—"*41 + " V S " + "—"*41)
-    print()
-    print_side_by_side_boards([internal_to_setup(tried_lists[0]), internal_to_setup(tried_lists[1])], ["P2's pov of P1", "p1's pov of P2"])
+    # print_side_by_side_boards([internal_to_setup(internal_boards[i]) for i in range(len(internal_boards))], [f"P{i+1}" for i in range(len(players))])
+    # print()
+    # print("—"*41 + " V S " + "—"*41)
+    # print()
+    # print_side_by_side_boards([internal_to_setup(tried_lists[i]) for i in range(len(tried_lists))], [f"P{i+1}'s POV" for i in range(len(players))])
 
-print(f"GAME DONE IN {round_count} ROUNDS !")
+print(f"Game done in {round_count} rounds !")

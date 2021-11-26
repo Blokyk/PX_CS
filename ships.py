@@ -1,5 +1,7 @@
 from enum import Enum
 
+ship_types = ['P', 'C', 'R', 'S', 'T']
+
 def get_size(ship: str) -> int:
         return {
             ' ': 0,

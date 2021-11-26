@@ -1,14 +1,36 @@
+# Allow type-hints self-reference
+from __future__ import annotations
+
 from enum import Enum
 from typing import Dict, Optional, Tuple, TypeVar, Any, Callable, List, OrderedDict
+
 from ships import get_size
 
-from utils import letter_to_idx
+from utils import debug, letter_to_idx
 
-_T = TypeVar('_T')
+ship_types = ['P', 'C', 'R', 'S', 'T']
 
 class GameBoard(Dict[Tuple[int, int], str]):
     def __init__(self):
         return
+
+    def ship_type_is_sunk(self, part: str, tried_list: GameBoard) -> bool:
+        counter = 0
+
+        for (coords, ship) in self.items():
+            if ship == part and (coords, ship) in tried_list.items():
+                counter += 1
+
+        debug(f"Ship type {part} has been sunk {counter} times")
+
+        return counter == get_size(part)
+
+    def are_all_ships_sunk(self: GameBoard, tried_list: GameBoard) -> bool:
+        for part in ship_types:
+            if not self.ship_type_is_sunk(part, tried_list):
+                return False
+
+        return True
 
 class SetupGameBoard(List[List[str]]):
     lines_count: int
@@ -19,14 +41,22 @@ class SetupGameBoard(List[List[str]]):
         self.columns_count = cols
 
         for line in range(lines):
-            self.append([])
-            for col in range(cols):
-                self[line].append(' ')
+            self.append([' ' for _ in range(cols)])
+
+    def copy(self) -> SetupGameBoard:
+        output = SetupGameBoard(self.lines_count, self.columns_count)
+
+        for line in range(self.lines_count):
+                output[line] = self[line].copy()
+
+        return output
 
     def is_on_board(self, line: int, col: int) -> bool:
         return (0 <= line < self.lines_count) and (0 <= col < self.columns_count)
 
-    def __do_action_at(self, ship_type: str, angle: str, line: int, col: int, defaultValue: _T, stopValue: _T, func: Callable[[Any, int, int], _T]) -> _T:
+    __T = TypeVar("__T")
+
+    def __do_action_at(self, ship_type: str, angle: str, line: int, col: int, defaultValue: __T, stopValue: __T, func: Callable[[Any, int, int], __T]) -> __T:
         ship_size = get_size(ship_type)
         angle = angle.upper()
 
