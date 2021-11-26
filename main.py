@@ -1,50 +1,29 @@
 if __name__ != '__main__':
     raise ImportError("main.py should never be imported !")
 
-import json
-from os import path
-from typing import Any, Callable, List
-from board_setup_utils import internal_to_setup, print_board, print_board_line, print_side_by_side_boards
-from board_utils import board_to_internal, does_attack_hit, hit_result
-from game_board import SetupGameBoard, GameBoard
+from typing import Callable, List, Tuple
 
+from board_setup_utils import print_side_by_side_boards
+from board_utils import board_to_internal, does_attack_hit, internal_to_setup
+from game_board import GameBoard
 
-from ships import get_size
-from utils import format_error, format_pos_and_angle, letter_to_idx
+from player_types import human
+
 from main_utils import *
-from player_types import ai, base, human, mock
+
+
+
+
+
+
 
 boards = []
-
-def get_player(num: int) -> base.Player:
-    print(f"What type of player do you want P{num} to be ?\n\t- [h]uman\n\t- [r]andom/[m]ock\n\t- [a]i")
-
-    is_player_type_valid = False
-    output = base.Player()
-
-    while not is_player_type_valid:
-
-        answer = input("h/r/m/a : ").lower()
-
-        # assume it's true, and only loop again if it's not valid (i.e. the else branch)
-        is_player_type_valid = True
-
-        if answer == "h" or answer == "human":
-            output = human.HumanPlayer()
-        elif answer in "rm" or answer == "random" or answer == "mock":
-            output = mock.RandomPlayer()
-        elif answer == "a" or answer == "ai":
-            output = ai.AIPlayer()
-        else:
-            is_player_type_valid = False
-
-    return output
 
 players = [get_player(1), get_player(2)]
 
 for (i, p) in enumerate(players):
     if p.__class__ == human.HumanPlayer:
-        boards.append(init_player_board(10, 10))
+        boards.append(init_board_from_user_input(10, 10))
     else:
         boards.append(generate_random_board(10, 10))
 
@@ -72,7 +51,16 @@ while not isGameFinished:
     round_count += 1
     print(f"ROUND {round_count}")
 
-    def check_player_hit(idx: int, hit: Tuple[int, int], hit_handler: Any, sink_handler: Any) -> bool:
+    def check_player_hit(idx: int, hit: Tuple[int, int], hit_handler: Callable[[GameBoard, Tuple[int, int]], None], sink_handler: Callable[[GameBoard, Tuple[int, int], str], None]) -> bool:
+        """
+
+        Params :
+            - idx (int) --
+            - hit (Tuple[int, int]) --
+            - hit_handler --
+            - sink_handler --
+        """
+
         board_idx = get_enemy_board_idx(idx)
         success = does_attack_hit(internal_boards[board_idx], hit)
         tried_lists[idx][hit] = internal_boards[board_idx][hit] if success else "~"
@@ -97,13 +85,19 @@ while not isGameFinished:
 
     for (i, player) in enumerate(players):
         print()
-        print("—"*8 + f"( P{i+1} )" + "—"*72)
-        print()
+        print('  ' + '—'*43 + f"( P{i+1} )" + '—'*44) # total width of side-by-side boards is 86
         print_side_by_side_boards([internal_to_setup(internal_boards[-i]), internal_to_setup(tried_lists[-i])], [f"P{i+1}'s board", f"P{i+1}'s hits"])
         print()
+
+        next_spot = player.get_next_action()
+
+        while next_spot in tried_lists[i].keys():
+            next_spot = player.get_next_action()
+            player.react_already_tried(next_spot)
+
         res = check_player_hit(
             i,
-            player.get_next_action(tried_lists[i]),
+            next_spot,
             player.react_hit_success,
             player.react_hit_sunk
         )
@@ -118,14 +112,8 @@ while not isGameFinished:
     if any_success:
         for i in range(len(internal_boards)):
             # Yes, while testing i had a game where both AIs won and lost at the same time... 54 rounds if you're wondering
-            if not isGameFinished and internal_boards[get_enemy_board_idx(i)].are_all_ships_sunk(tried_lists[i]):
+            if not isGameFinished and internal_boards[get_enemy_board_idx(i)].are_all_ships_sunk(tried_lists[-i]):
                 print(f"Player {(i+1)*2 % 3} lost !")
                 isGameFinished = True
-
-    # print_side_by_side_boards([internal_to_setup(internal_boards[i]) for i in range(len(internal_boards))], [f"P{i+1}" for i in range(len(players))])
-    # print()
-    # print("—"*41 + " V S " + "—"*41)
-    # print()
-    # print_side_by_side_boards([internal_to_setup(tried_lists[i]) for i in range(len(tried_lists))], [f"P{i+1}'s POV" for i in range(len(players))])
 
 print(f"Game done in {round_count} rounds !")
