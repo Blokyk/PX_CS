@@ -2,32 +2,31 @@ from enum import Enum
 from typing import Dict, Optional, Tuple, TypeVar, Any, Callable, List, OrderedDict
 from ships import get_size
 
-from ships import ShipPart
 from utils import letter_to_idx
 
 _T = TypeVar('_T')
 
-class InternalGameBoard(Dict[Tuple[int, int], str]):
+class GameBoard(Dict[Tuple[int, int], str]):
     def __init__(self):
         return
 
-class GameBoard(List[List[ShipPart]]):
+class SetupGameBoard(List[List[str]]):
     lines_count: int
+    columns_count: int
 
-    def __init__(self):
-        self.lines_count = 0
+    def __init__(self, lines: int, cols: int):
+        self.lines_count = lines
+        self.columns_count = cols
 
-    def append(self, __object: List[ShipPart]) -> None:
-        self.lines_count += 1
-        return super().append(__object)
-
-    def get_columns_count(self):
-        return len(self[0])
+        for line in range(lines):
+            self.append([])
+            for col in range(cols):
+                self[line].append(' ')
 
     def is_on_board(self, line: int, col: int) -> bool:
-        return (0 <= line < self.lines_count) and (0 <= col < self.get_columns_count())
+        return (0 <= line < self.lines_count) and (0 <= col < self.columns_count)
 
-    def __do_action_at(self, ship_type: ShipPart, angle: str, line: int, col: int, defaultValue: _T, stopValue: _T, func: Callable[[Any, int, int], _T]) -> _T:
+    def __do_action_at(self, ship_type: str, angle: str, line: int, col: int, defaultValue: _T, stopValue: _T, func: Callable[[Any, int, int], _T]) -> _T:
         ship_size = get_size(ship_type)
         angle = angle.upper()
 
@@ -54,7 +53,7 @@ class GameBoard(List[List[ShipPart]]):
         return defaultValue
 
 
-    def insert_ship_at(self, ship_type: ShipPart, angle: str, line: int, col: int) -> None:
+    def insert_ship_at(self, ship_type: str, angle: str, line: int, col: int) -> None:
         # we don't need an assertion because the check for the stopValue latter makes sure
         # that we'll stop (and raise an exception) if it's not possible (since __do_action_at
         # will stop unexpectedly)
@@ -64,10 +63,10 @@ class GameBoard(List[List[ShipPart]]):
         def action(self, line: int, col: int) -> Optional[str]:
             #print("putting", ship_type, "at", "(" + str(line) + "," + str(col) + ")")
 
-            if self[line][col].value != ' ':
+            if self[line][col] != ' ':
                 return errorValue
 
-            self[line][col] = ShipPart(ship_type.value)
+            self[line][col] = ship_type
 
                                                 # stopValue has to be different than None
                                                 #   - because our function always returns None
@@ -75,9 +74,9 @@ class GameBoard(List[List[ShipPart]]):
         if (self.__do_action_at(ship_type, angle, line, col, None, errorValue, action)) == errorValue:
             raise ValueError("Could not put" + str(ship_type) + "at position " + angle + "(" + str(line) + "," + str(col) + ")")
 
-    def can_insert_ship_at(self, ship_type: ShipPart, angle: str, line: int, col: int) -> bool:
+    def can_insert_ship_at(self, ship_type: str, angle: str, line: int, col: int) -> bool:
         def action(self, line: int, col: int) -> bool:
-            return self[line][col].value == ' '
+            return self[line][col] == ' '
 
         return self.__do_action_at(ship_type, angle, line, col, True, False, action)
 

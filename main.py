@@ -3,15 +3,17 @@ if __name__ != '__main__':
 
 import json
 from os import path
-from typing import List
-from board_utils import board_to_internal, print_board, print_board_line, print_side_by_side_boards
-from game_board import GameBoard, InternalGameBoard
+from typing import Any, Callable, List
+from board_setup_utils import internal_to_setup, print_board, print_board_line, print_side_by_side_boards
+from board_utils import board_to_internal, does_attack_hit
+from game_board import SetupGameBoard, GameBoard
 
-from ships import ShipPart, get_size
+from ships import get_size
 from utils import format_error, format_pos_and_angle, letter_to_idx
 from main_utils import *
+import ai
 
-boards = [init_board(10, 10), init_board(10, 10)]
+boards = [SetupGameBoard(10, 10), SetupGameBoard(10, 10)]
 
 
 # if path.exists("./boards.json"):
@@ -19,44 +21,80 @@ boards = [init_board(10, 10), init_board(10, 10)]
 #     dic_list: List[InternalGameBoard] = json.loads(f.read())
 #     for i in range(len(dic_list)):
 #         for (line, col) in dic_list[i]:
-#             boards[i][line][col] = ShipPart(dic_list[i][(line, col)])
+#             boards[i][line][col] = dic_list[i][(line, col)]
 # else:
 
 boards = mock_player_boards(boards)
 
 print_side_by_side_boards(boards)
 
-dic_boards: List[InternalGameBoard] = []
+internal_boards: List[GameBoard] = []
 
 for i in range(len(boards)):
-    dic_boards.append(board_to_internal(boards[i]))
+    internal_boards.append(board_to_internal(boards[i]))
 
-print(dic_boards)
+# We have to invert the boards, because internal_boards[0] corresponds to the
+# board **attacked** by P1, and internal_boards[1] is **attacked** by P2
+
+internal_boards.reverse()
+
+#print(dic_boards)
 
 # f = open("./boards.json", "w+")
 # f.write(json.dumps(dic_boards))
 
 isGameFinished = False
 
-hitlists: List[InternalGameBoard] = [InternalGameBoard(), InternalGameBoard()]
+tried_lists: List[GameBoard] = [GameBoard(), GameBoard()]
 
 sunk_types: List[str] = []
 
+round_count = 0
+
+p1 = ai.AIPlayer()
+p2 = ai.AIPlayer()
+
 while not isGameFinished:
-    enemy_board = dic_boards[1]
-    enemy_hitlist = hitlists[1]
 
-    act_player_turn(dic_boards[1], hitlists[1])
+    round_count += 1
+    print(f"ROUND {round_count}")
 
-    print(hitlists)
+    def check_player_hit(idx: int, hit: Tuple[int, int], hit_handler: Any, sink_handler: Any) -> bool:
+        success = does_attack_hit(internal_boards[idx], hit)
+        tried_lists[idx][hit] = internal_boards[idx][hit] if success else "~"
 
-    for part in set(ship_types).difference(sunk_types):
-        if ship_type_is_sunk(part, dic_boards[1], hitlists[1]):
-            print(f"Ship {part} has been sunk on P2's board !")
-            sunk_types.append(part)
-"""
-    for i in range(len(dic_boards)):
-        if are_all_ships_sunk(dic_boards[i], hitlists[i]):
-            print(f"Player {i+1} lost !")
-            isGameFinished = True
-"""
+        if success:
+            print(f"P{idx+1} : HIT @ {hit}")
+            for part in set(ship_types).difference(sunk_types):
+                if ship_type_is_sunk(part, internal_boards[idx], tried_lists[idx]):
+                    print(f"Ship {part} has been sunk on P{(idx+1)*2 % 3}'s board !")
+                    sunk_types.append(part)
+                    sink_handler(internal_boards[idx], tried_lists[idx], hit, internal_boards[idx][hit])
+                    return True
+
+            # if we got here, that means that we didn't sink any ship
+            hit_handler(internal_boards[idx], tried_lists[idx], hit)
+        else:
+            print(f"P{idx+1} : Miss @ {hit}")
+
+        return success
+
+    def do_nothing_hit(board: GameBoard, tried_list: GameBoard, hit: Tuple[int, int, int]):
+        pass
+    def do_nothing_sunk(board: GameBoard, tried_list: GameBoard, hit: Tuple[int, int, int], ship_type: str):
+        pass
+
+    p1_success = check_player_hit(0, ask_for_player_turn(internal_boards[0], tried_lists[0]), p1.react_hit_success, p1.react_hit_sunk)
+    p2_success = check_player_hit(1, p2.get_next_ai_turn(internal_boards[1], tried_lists[1]), p2.react_hit_success, p2.react_hit_sunk)
+
+    # If any of them hit, check if any of the bords are lost
+    if p1_success or p2_success:
+        for i in range(len(internal_boards)):
+            if are_all_ships_sunk(internal_boards[i], tried_lists[i]):
+                print(f"Player {(i+1)*2 % 3} lost !")
+                isGameFinished = True
+
+    print_side_by_side_boards([internal_to_setup(internal_boards[0]), internal_to_setup(internal_boards[1])])
+    print_side_by_side_boards([internal_to_setup(tried_lists[0]), internal_to_setup(tried_lists[1])])
+
+print(f"GAME DONE IN {round_count} ROUNDS !")
