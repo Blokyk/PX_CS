@@ -1,28 +1,38 @@
 # I feel way better about my logger implementation in Parsex now that
 # I've written this horrible piece of code :)
 
+from math import ceil, floor
 from typing import List
 
 from utils import letter_to_idx
 
 from game_board import SetupGameBoard, GameBoard
 
-def __print_board_header(board: SetupGameBoard, end: str = '') -> None:
-        print('————'*board.columns_count + '—', end=end)
+def __print_board_header(board: SetupGameBoard, label: str = '', end: str = '') -> None:
+        if label == '':
+            print('————'*board.columns_count + '—', end=end)
+            return
 
-def print_side_by_side_boards(boards: List[SetupGameBoard]) -> None:
+        dash_count = (4*board.columns_count - (len(label) + 2))/2
+        print('—' * floor(dash_count), end='')
+        print(' ' + label + ' ', end='')
+        print('—' * ceil(dash_count), end='')
+        print('—', end=end)
+
+
+def print_side_by_side_boards(boards: List[SetupGameBoard], labels: List[str] = []) -> None:
     max_line = max(boards, key=lambda b: b.lines_count).lines_count
 
     def print_boards_separator() -> None:
         print(' '*2 + '|' + ' '*2, end='')
 
-    def print_headers(bs: List[SetupGameBoard]) -> None:
+    def print_headers(bs: List[SetupGameBoard], labels: List[str] = []) -> None:
         for (i, b) in enumerate(bs):
-            __print_board_header(b)
+            __print_board_header(b, labels[i] if i < len(labels) else '')
             if i != len(boards) - 1: # FIXME: this is incredibly ugly
                 print_boards_separator()
 
-    print_headers(boards)
+    print_headers(boards, labels)
 
     print()
     for l in range(max_line):

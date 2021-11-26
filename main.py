@@ -15,18 +15,9 @@ import ai
 
 boards = [SetupGameBoard(10, 10), SetupGameBoard(10, 10)]
 
-
-# if path.exists("./boards.json"):
-#     f = open("./boards.json", "r")
-#     dic_list: List[InternalGameBoard] = json.loads(f.read())
-#     for i in range(len(dic_list)):
-#         for (line, col) in dic_list[i]:
-#             boards[i][line][col] = dic_list[i][(line, col)]
-# else:
-
 boards = mock_player_boards(boards)
 
-print_side_by_side_boards(boards)
+print_side_by_side_boards(boards, ["P1", "P2"])
 
 internal_boards: List[GameBoard] = []
 
@@ -37,11 +28,6 @@ for i in range(len(boards)):
 # board **attacked** by P1, and internal_boards[1] is **attacked** by P2
 
 internal_boards.reverse()
-
-#print(dic_boards)
-
-# f = open("./boards.json", "w+")
-# f.write(json.dumps(dic_boards))
 
 isGameFinished = False
 
@@ -94,7 +80,10 @@ while not isGameFinished:
                 print(f"Player {(i+1)*2 % 3} lost !")
                 isGameFinished = True
 
-    print_side_by_side_boards([internal_to_setup(internal_boards[0]), internal_to_setup(internal_boards[1])])
-    print_side_by_side_boards([internal_to_setup(tried_lists[0]), internal_to_setup(tried_lists[1])])
+    print_side_by_side_boards([internal_to_setup(internal_boards[0]), internal_to_setup(internal_boards[1])], ["P1", "P2"])
+    print()
+    print("—"*41 + " V S " + "—"*41)
+    print()
+    print_side_by_side_boards([internal_to_setup(tried_lists[0]), internal_to_setup(tried_lists[1])], ["P2's pov of P1", "p1's pov of P2"])
 
 print(f"GAME DONE IN {round_count} ROUNDS !")

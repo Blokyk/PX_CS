@@ -4,6 +4,7 @@ from board_utils import does_attack_hit, is_on_board, hit_result
 
 from game_board import GameBoard
 from ships import get_size
+from utils import debug
 
 def gen_diagonal_for_size(min_size: int, board_size: int) -> List[Tuple[int, int]]:
     output = []
@@ -36,15 +37,15 @@ class AIPlayer():
         def get_next_spot() -> Tuple[int, int]:
             quadrant_idx = 0 if self.max_boat_size < 4 else 1
             if len(self.targets_stack) != 0:
-                print(self.targets_stack)
+                debug(self.targets_stack)
                 return self.targets_stack.pop(-1)
             else:
+                # Occasionally, we'll have broken the pattern because of target mode,
+                # so we need to scale it down
                 if len(self.pattern_quadrants[quadrant_idx]) == 0:
-                    print("uh oh")
                     self.max_boat_size = 3
                     return get_next_spot()
                 rnd = randint(0, len(self.pattern_quadrants[quadrant_idx]) - 1)
-                #print(rnd)
                 return self.pattern_quadrants[quadrant_idx][rnd]
 
         next_spot = get_next_spot()
@@ -57,12 +58,14 @@ class AIPlayer():
         if next_spot in self.pattern_quadrants[quadrant_idx]:
             self.pattern_quadrants[quadrant_idx].remove(next_spot)
 
-
         return next_spot
 
     def react_hit_success(self, board: GameBoard, tried_list: GameBoard, hit: Tuple[int, int]):
+        """Notifies the AI it hit a ship
+        """
+
         if len(self.targets_stack) == 0:
-            print("Switched to target mode !")
+            debug("Switched to target mode !")
 
         (hit_line, hit_col) = hit
 
@@ -77,7 +80,10 @@ class AIPlayer():
                 self.targets_stack.append(target)
 
     def react_hit_sunk(self, board: GameBoard, tried_list: GameBoard, hit: Tuple[int, int], ship_type: str):
-        print(f"AI actually managed to sink a {ship_type}-type ship !")
+        """Notifies the AI it sunk a ship
+        """
+
+        debug(f"AI actually managed to sink a {ship_type}-type ship !")
 
         if self.max_boat_size == get_size(ship_type):
             self.max_boat_size -= 1

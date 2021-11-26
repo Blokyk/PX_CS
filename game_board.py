@@ -30,7 +30,7 @@ class SetupGameBoard(List[List[str]]):
         ship_size = get_size(ship_type)
         angle = angle.upper()
 
-        #print(ship_size)
+        #debug(ship_size)
 
         new_col = col
         new_line = line
@@ -61,7 +61,7 @@ class SetupGameBoard(List[List[str]]):
         errorValue = ''
 
         def action(self, line: int, col: int) -> Optional[str]:
-            #print("putting", ship_type, "at", "(" + str(line) + "," + str(col) + ")")
+            #debug("putting", ship_type, "at", "(" + str(line) + "," + str(col) + ")")
 
             if self[line][col] != ' ':
                 return errorValue

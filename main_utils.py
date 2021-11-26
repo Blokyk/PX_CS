@@ -60,10 +60,10 @@ def init_player_boards(boards: List[SetupGameBoard]) -> List[SetupGameBoard]:
             ori = input_orientation()
 
             while not board.can_insert_ship_at(part, ori, pos[0], pos[1]):
-                print("You can't put a ship there !", end='')
+                print(format_error("You can't put a ship there !"), end='')
 
                 if (board[pos[0]][pos[1]] != ' '):
-                    print("There's already a" + str(board[pos[0]][pos[1]]) + "!", end='')
+                    print(format_error("There's already a" + str(board[pos[0]][pos[1]]) + "!"), end='')
 
                 print()
 
@@ -72,7 +72,7 @@ def init_player_boards(boards: List[SetupGameBoard]) -> List[SetupGameBoard]:
 
             board.insert_ship_at(part, ori, pos[0], pos[1])
             print_board(board)
-            #print("Successfully inserted" + str(part) + "@ " + format_pos_and_angle(pos[0], pos[1], ori))
+            #debug("Successfully inserted" + str(part) + "@ " + format_pos_and_angle(pos[0], pos[1], ori))
     return boards
 
 def ship_type_is_sunk(part: str, board: GameBoard, tried_list: GameBoard) -> bool:
@@ -82,7 +82,7 @@ def ship_type_is_sunk(part: str, board: GameBoard, tried_list: GameBoard) -> boo
         if ship == part and (coords, ship) in tried_list.items():
             counter += 1
 
-    #print("Ship type " + part + " has been sunk " + str(counter))
+    #debug("Ship type " + part + " has been sunk " + str(counter))
 
     return counter == get_size(part)
 
@@ -93,12 +93,24 @@ def are_all_ships_sunk(board: GameBoard, tried_list: GameBoard) -> bool:
 
     return True
 
+def mock_player_turn(board: GameBoard, tried_list: GameBoard) -> Tuple[int, int]:
+    def input_attack_position() -> Tuple[int, int]:
+        return (randint(0, 9), randint(0, 9))
+
+    hit = input_attack_position()
+
+    # if the player hits twice the same spot, warn and ask them again
+    while hit in tried_list.keys():
+        hit = input_attack_position()
+
+    return hit
+
+
 def ask_for_player_turn(board: GameBoard, tried_list: GameBoard) -> Tuple[int, int]:
 
     print("Where do you want to hit next?")
 
     def input_attack_position() -> Tuple[int, int]:
-        return (randint(0, 9), randint(0, 9))
         def decode(pos: str) -> Tuple[int, int]:
             return (int(pos.split(' ')[0]) - 1, letter_to_idx(pos.split(' ')[1].upper()))
 

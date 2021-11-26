@@ -12,3 +12,6 @@ def format_pos_and_angle(line: int, col: int, angle: str):
 
 def format_error(text: str) -> str:
     return '\033[31;1;4m' + text + '\033[0m'
+
+def debug(text):
+    if False: print(text)
